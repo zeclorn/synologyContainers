@@ -1,0 +1,44 @@
+version: '3'
+services:
+    grafana:
+        container_name: grafana
+        image: grafana/grafana
+        restart: unless-stopped
+        ports:
+            - '3000:3000'
+        volumes:
+            - grafana-storage:/var/lib/grafana
+        links:
+            - influxdb
+    influxdb:
+        container_name: influxdb
+        image: influxdb
+        restart: unless-stopped
+        ports:
+            - "8083:8083"
+            - "8086:8086"
+        volumes:
+            - influxdb-storage:/var/lib/influxdb
+    telegraf:
+        container_name: telegraf
+        image: telegraf
+        restart: unless-stopped
+        volumes:
+           - /var/run/docker.sock:/var/run/docker.sock
+           - /proc:/host/proc
+           - ${PWD}/conf/telegraf/.snmp:/root/.snmp
+           - ${PWD}/conf/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+           - /volume1/docker/lancache/lancache/logs/access.log:/tmp/access.log:ro
+           #Grant RO access to the lancacheDirectory to pull metrics on file usage
+           - /volume1/docker/lancache/lancache:/tmp/lancache:ro
+        links:
+            - influxdb    
+    speedtest:
+        image: barrycarey/speedtest-for-influxdb-and-grafana
+        container_name: speedtest
+        volumes:
+           - ${PWD}/conf/speedtest/config.ini:/src/config.ini
+        restart: unless-stopped            
+volumes:
+    influxdb-storage:
+    grafana-storage:
