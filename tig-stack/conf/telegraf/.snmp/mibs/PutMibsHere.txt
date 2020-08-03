@@ -1,0 +1,2 @@
+#put the mib files in this location that you want your Telegraf instance to have access too.
+#this will prevent you from having to do download-mibs on the host container
