@@ -1,0 +1,21 @@
+###Read https://netplan.io/examples/
+###Read https://linuxhint.com/ubuntu_20-04_network_configuration/
+###
+# sudo cp /etc/netplan/01-network-manager-all.yaml 01-network-manager-all.yaml.bak
+##sudo netplan try
+##sudo netplan apply
+# Let NetworkManager manage all devices on this system
+network:
+    version: 2
+    renderer: networkd
+    ethernets:
+        #Make this match the interface from ip addr
+        enp1s0:
+         addresses:
+             - <IP1>/<subnetMask like /24 or /16>
+             - <IP2>/<subnetMask like /24 or /16>
+             - <IP3>/<subnetMask like /24 or /16>
+         gateway4: <Gateway IP>
+         nameservers:
+             search: [<searchDomain1>, <searchDomain2>]
+             addresses: [<DNS1>, <DNS2>, <8.8.8.8>] #Remember -- this could be our PI-Hole IP
