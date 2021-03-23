@@ -1,0 +1,99 @@
+########LanCache
+version: "3"
+services:
+  dns:
+    image: lancachenet/lancache-dns:latest
+    env_file: .env
+    restart: unless-stopped
+    ports:
+      - ${DNS_BIND_IP}:53:53/udp
+  sniproxy:
+    image: lancachenet/sniproxy:latest
+    env_file: .env
+    restart: unless-stopped
+    ports:
+      - ${DNS_BIND_IP}:443:443/tcp
+  monolithic:
+    image: lancachenet/monolithic:latest
+    env_file: .env
+    restart: unless-stopped
+    ports:
+      - ${DNS_BIND_IP}:80:80/tcp
+    volumes:
+      - ${CACHE_ROOT}/cache:/data/cache
+      - ${CACHE_ROOT}/logs:/data/logs
+    mem_limit: 8g
+
+########Nginx Prox Mgr########
+
+#version: "3"
+#services:
+  app:
+    image: jc21/nginx-proxy-manager:latest
+    env_file: .env
+    restart: always
+    ports:
+      # Public HTTP Port:
+      - ${NGINX_BIND_IP}:80:80
+      # Public HTTPS Port:
+      - ${NGINX_BIND_IP}:443:443
+      # Admin Web Port:
+      - ${NGINX_BIND_IP}:81:81
+    environment:
+      # These are the settings to access your db
+      DB_MYSQL_HOST: "nginxdb"
+      DB_MYSQL_PORT: 3306
+      DB_MYSQL_USER: ${NGINX_MYSQL_USER}
+      DB_MYSQL_PASSWORD: ${NGINX_MYSQL_PASSWORD}
+      DB_MYSQL_NAME: "npm"
+      # If you would rather use Sqlite uncomment this
+      # and remove all DB_MYSQL_* lines above
+      # DB_SQLITE_FILE: "/data/database.sqlite"
+      # Uncomment this if IPv6 is not enabled on your host
+      # DISABLE_IPV6: 'true'
+    volumes:
+      - ./nginxproxymgr/data:/data
+      - ./nginxproxymgr/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - nginxdb
+  nginxdb:
+    image: jc21/mariadb-aria:latest
+    env_file: .env
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${NGINX_MYSQL_PASSWORD}
+      MYSQL_DATABASE: 'npm'
+      MYSQL_USER: ${NGINX_MYSQL_USER}
+      MYSQL_PASSWORD: ${NGINX_MYSQL_PASSWORD}
+    volumes:
+      - ./nginxproxymgr/data/mysql:/var/lib/mysql
+
+# More info at https://github.com/pi-hole/docker-pi-hole/ and https://docs.pi-hole.net/
+#services:
+  pihole:
+    #container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - ${PIHOLE_BIND_IP}:53:53/tcp
+      - ${PIHOLE_BIND_IP}:53:53/udp
+      - ${PIHOLE_BIND_IP}:67:67/udp
+      - ${PIHOLE_BIND_IP}:80:80/tcp
+      - ${PIHOLE_BIND_IP}:443:443/tcp
+    environment:
+      env_file: .env
+      TZ: 'America/Chicago'
+      WEBPASSWORD: ${PIHOLD_WEB_PWD}
+    # Volumes store your data between container upgrades
+    volumes:
+      - ./pihole/etc-pihole/:/etc/pihole/
+      - ./pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/
+    # Recommended but not required (DHCP needs NET_ADMIN)
+    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+
+networks:
+  default:
+    external:
+      name: dockerlan
